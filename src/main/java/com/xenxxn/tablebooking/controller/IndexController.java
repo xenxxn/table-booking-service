@@ -1,4 +1,4 @@
-package com.xenxxn.tablebooking.controller;
+package com.xenxxn.tablebooking.domain.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 
