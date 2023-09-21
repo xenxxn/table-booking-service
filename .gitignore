@@ -25,6 +25,7 @@ bin/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
+applications-security.properties
 
 ### NetBeans ###
 /nbproject/private/
