@@ -1,4 +1,4 @@
-package com.xenxxn.tablebooking.domain.controller;
+package com.xenxxn.tablebooking.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
