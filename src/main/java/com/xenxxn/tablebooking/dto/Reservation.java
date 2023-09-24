@@ -1,2 +1,4 @@
-package com.xenxxn.tablebooking.dto;public class Reservation {
+package com.xenxxn.tablebooking.dto;
+
+public class Reservation {
 }

@@ -1,2 +1,11 @@
-package com.xenxxn.tablebooking.service;public class MemberService {
+package com.xenxxn.tablebooking.service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class MemberService {
 }
