@@ -4,8 +4,8 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xenxxn.tablebooking.Role;
-import com.xenxxn.tablebooking.entity.MemberEntity;
-import com.xenxxn.tablebooking.global.jwt.Service.JwtService;
+import com.xenxxn.tablebooking.entity.Member;
+import com.xenxxn.tablebooking.global.jwt.service.JwtService;
 import com.xenxxn.tablebooking.repository.MemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +21,6 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -80,9 +80,7 @@ public class JwtFilterAuthenticationTest {
 
     @BeforeEach
     private void init(){
-        memberRepository.save(MemberEntity.builder().memberEmail(USERNAME)
-                .password(delegatingPasswordEncoder.encode(PASSWORD))
-                .memberType(Role.USER).build());
+        memberRepository.save(Member.builder().username(USERNAME).password(delegatingPasswordEncoder.encode(PASSWORD)).role(Role.USER).build());
         clear();
     }
 
@@ -116,15 +114,6 @@ public class JwtFilterAuthenticationTest {
         return tokenMap;
     }
 
-
-
-
-
-
-    /**
-     * AccessToken : 존재하지 않음,
-     * RefreshToken : 존재하지 않음
-     */
     @Test
     public void Access_Refresh_모두_존재_X() throws Exception {
         //when, then
@@ -133,11 +122,6 @@ public class JwtFilterAuthenticationTest {
     }
 
 
-
-    /**
-     * AccessToken : 유효,
-     * RefreshToken : 존재하지 않음
-     */
     @Test
     public void AccessToken만_보내서_인증() throws Exception {
         //given
@@ -338,7 +322,4 @@ public class JwtFilterAuthenticationTest {
                 .andReturn();
 
     }
-
-
-
 }

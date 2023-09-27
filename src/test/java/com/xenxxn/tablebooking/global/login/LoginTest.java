@@ -1,8 +1,17 @@
 package com.xenxxn.tablebooking.global.login;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+
+import static org.springframework.http.MediaType.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.persistence.EntityManager;
+
 import com.xenxxn.tablebooking.Role;
-import com.xenxxn.tablebooking.entity.MemberEntity;
+import com.xenxxn.tablebooking.entity.Member;
 import com.xenxxn.tablebooking.repository.MemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,22 +25,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.EntityManager;
-import javax.transaction.Transactional;
-import java.awt.*;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
-@SpringBootTest
 @Transactional
+@SpringBootTest
 @AutoConfigureMockMvc
-public class LoginTest {
+class LoginTest {
+
     @Autowired
     MockMvc mockMvc;
 
@@ -39,134 +42,148 @@ public class LoginTest {
     MemberRepository memberRepository;
 
     @Autowired
-    EntityManager entityManager;
+    EntityManager em;
 
     PasswordEncoder delegatingPasswordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
+
     ObjectMapper objectMapper = new ObjectMapper();
 
-    private static String KEY_MEMBER_EMAIL = "memberEmail";
+    private static String KEY_USERNAME = "username";
     private static String KEY_PASSWORD = "password";
-    private static String MEMBEREMAIL= "memberEmail";
+    private static String USERNAME = "username";
     private static String PASSWORD = "123456789";
-    private static String LOGIN_URL = "/login";
+
+    private static String LOGIN_RUL = "/login";
+
 
     private void clear() {
-        entityManager.flush();
-        entityManager.clear();
+        em.flush();
+        em.clear();
     }
 
     @BeforeEach
     private void init() {
-        memberRepository.save(MemberEntity.builder()
-                        .memberEmail(MEMBEREMAIL)
-                        .password(delegatingPasswordEncoder.encode(PASSWORD))
-                        .memberType(Role.USER)
+        memberRepository.save(Member.builder()
+                .username(USERNAME)
+                .password(delegatingPasswordEncoder.encode(PASSWORD))
+                .role(Role.USER)
                 .build());
         clear();
-
     }
-    private Map getMemberEmailPasswordMap (String memberEmail, String password) {
+
+    private Map getUsernamePasswordMap(String username, String password) {
         Map<String, String> map = new HashMap<>();
-        map.put(KEY_MEMBER_EMAIL, memberEmail);
+        map.put(KEY_USERNAME, username);
         map.put(KEY_PASSWORD, password);
         return map;
     }
 
     private ResultActions perform(String url, MediaType mediaType, Map usernamePasswordMap) throws Exception {
-        return mockMvc.perform(
-                MockMvcRequestBuilders
-                        .post(url)
-                        .contentType(mediaType)
-                        .content(objectMapper.writeValueAsString(usernamePasswordMap)));
-    }
+        return mockMvc.perform(MockMvcRequestBuilders
+                .post(url)
+                .contentType(mediaType)
+                .content(objectMapper.writeValueAsString(usernamePasswordMap)));
 
+    }
     @Test
-    void loginSuccess() throws Exception{
+    public void 로그인_성공() throws Exception {
         //given
-        Map<String, String> map = getMemberEmailPasswordMap(MEMBEREMAIL, PASSWORD);
+        Map<String, String> map = getUsernamePasswordMap(USERNAME, PASSWORD);
+
+
         //when
-        //then
-        MvcResult result = perform(LOGIN_URL, MediaType.APPLICATION_JSON, map)
+        MvcResult result = perform(LOGIN_RUL, APPLICATION_JSON, map)
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andReturn();
     }
 
-    @Test
-    void loginFail_EmailNotMatch() throws Exception{
-        //given
-        Map<String, String> map = getMemberEmailPasswordMap(MEMBEREMAIL+"123", PASSWORD);
-        //when
-        //then
 
-        MvcResult result = perform(LOGIN_URL, MediaType.APPLICATION_JSON, map)
+
+    @Test
+    public void 로그인_실패_아이디틀림() throws Exception {
+        //given
+        Map<String, String> map = getUsernamePasswordMap(USERNAME+"123", PASSWORD);
+
+        //when
+        MvcResult result = perform(LOGIN_RUL, APPLICATION_JSON, map)
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andReturn();
     }
 
-    @Test
-    void loginFail_PasswordNotMatch() throws Exception{
-        //given
-        Map<String, String> map = getMemberEmailPasswordMap(MEMBEREMAIL, PASSWORD+"123");
-        //when
-        //then
 
-        MvcResult result = perform(LOGIN_URL, MediaType.APPLICATION_JSON, map)
+
+
+    @Test
+    public void 로그인_실패_비밀번호틀림() throws Exception {
+        //given
+        Map<String, String> map = getUsernamePasswordMap(USERNAME, PASSWORD+"123");
+
+
+        //when
+        MvcResult result = perform(LOGIN_RUL, APPLICATION_JSON, map)
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andReturn();
     }
 
+
     @Test
-    void loginUrlNotMatch_FORBIDDEN() throws Exception {
+    public void 로그인_주소가_틀리면_FORBIDDEN() throws Exception {
         //given
-        Map<String, String> map = getMemberEmailPasswordMap(MEMBEREMAIL, PASSWORD);
-        //when
-        //then
-        perform(LOGIN_URL+"123", MediaType.APPLICATION_JSON, map)
+        Map<String, String> map = getUsernamePasswordMap(USERNAME, PASSWORD);
+
+
+        //when, then
+        perform(LOGIN_RUL+"123", APPLICATION_JSON, map)
                 .andDo(print())
                 .andExpect(status().isForbidden());
+
     }
 
+
     @Test
-    void loginDataIsNotJson() throws Exception{
+    public void 로그인_데이터형식_JSON이_아니면_200() throws Exception {
         //given
-        Map<String, String> map = getMemberEmailPasswordMap(MEMBEREMAIL, PASSWORD);
-        //when
-        perform(LOGIN_URL, APPLICATION_FORM_URLENCODED, map)
+        Map<String, String> map = getUsernamePasswordMap(USERNAME, PASSWORD);
+
+        //when, then
+        perform(LOGIN_RUL, APPLICATION_FORM_URLENCODED, map)
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andReturn();
-        //then
     }
 
     @Test
-    void loginHttpMethodGet() throws Exception{
+    public void 로그인_HTTP_METHOD_GET이면_NOTFOUND() throws Exception {
         //given
-        Map<String, String> map = getMemberEmailPasswordMap(MEMBEREMAIL, PASSWORD);
-        //when
-        mockMvc.perform(MockMvcRequestBuilders
-                .get(LOGIN_URL)
-                .contentType(APPLICATION_FORM_URLENCODED)
-                .content(objectMapper.writeValueAsString(map)))
-                .andDo(print())
-                .andExpect(status().isNotFound());
-        //then
-    }
+        Map<String, String> map = getUsernamePasswordMap(USERNAME, PASSWORD);
 
-    @Test
-    void loginHttpMethodPut() throws Exception{
-        //given
-        Map<String, String> map = getMemberEmailPasswordMap(MEMBEREMAIL, PASSWORD);
+
         //when
         mockMvc.perform(MockMvcRequestBuilders
-                        .put(LOGIN_URL)
+                        .get(LOGIN_RUL)
                         .contentType(APPLICATION_FORM_URLENCODED)
                         .content(objectMapper.writeValueAsString(map)))
                 .andDo(print())
                 .andExpect(status().isNotFound());
-        //then
     }
 
+
+
+    @Test
+    public void 오류_로그인_HTTP_METHOD_PUT이면_NOTFOUND() throws Exception {
+        //given
+        Map<String, String> map = getUsernamePasswordMap(USERNAME, PASSWORD);
+
+
+        //when
+        mockMvc.perform(MockMvcRequestBuilders
+                        .put(LOGIN_RUL)
+                        .contentType(APPLICATION_FORM_URLENCODED)
+                        .content(objectMapper.writeValueAsString(map)))
+                .andDo(print())
+                .andExpect(status().isNotFound());
+    }
 }

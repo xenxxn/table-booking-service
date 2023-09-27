@@ -20,15 +20,15 @@ public class Partner {
     private LocalDateTime registerDate;
     private LocalDateTime updateDate;
 
-//    public static Partner fromEntity(PartnerEntity partnerEntity) {
-//        return Partner.builder()
-//                .partnerId(partnerEntity.getPartnerId())
-//                .partnerEmail(partnerEntity.getPartnerEmail())
-//                .password(partnerEntity.getPassword())
-//                .phone(partnerEntity.getPhone())
-//                .memberType(partnerEntity.getMemberType())
-//                .registerDate(partnerEntity.getRegisterDate())
-//                .updateDate(partnerEntity.getUpdateDate())
-//                .build();
-//    }
+    public static Partner fromEntity(PartnerEntity partnerEntity) {
+        return Partner.builder()
+                .partnerId(partnerEntity.getPartnerId())
+                .partnerEmail(partnerEntity.getPartnerEmail())
+                .password(partnerEntity.getPassword())
+                .phone(partnerEntity.getPhone())
+                .memberType(partnerEntity.getMemberType().name())
+                .registerDate(partnerEntity.getRegisterDate())
+                .updateDate(partnerEntity.getUpdateDate())
+                .build();
+    }
 }

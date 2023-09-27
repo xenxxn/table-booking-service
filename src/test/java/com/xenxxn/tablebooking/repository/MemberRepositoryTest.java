@@ -1,7 +1,7 @@
 package com.xenxxn.tablebooking.repository;
 
 import com.xenxxn.tablebooking.Role;
-import com.xenxxn.tablebooking.entity.MemberEntity;
+import com.xenxxn.tablebooking.entity.Member;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,160 +19,150 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class MemberRepositoryTest {
 
-    @Autowired
-    MemberRepository memberRepository;
 
-    @Autowired
-    EntityManager entityManager;
+    @Autowired MemberRepository memberRepository;
+    @Autowired EntityManager em;
+
+
 
     private void clear(){
-        entityManager.flush();
-        entityManager.clear();
+        em.flush();
+        em.clear();
     }
 
     @AfterEach
     private void after(){
-        entityManager.clear();
+        em.clear();
     }
 
     @Test
-    public void memberSaveSuccess() {
-        // Given
-        MemberEntity memberEntity = MemberEntity.builder()
-                .memberEmail("test@test.com")
-                .password("1234")
-                .phone("01012341234")
-                .memberType(Role.USER)
-                .build();
-        MemberEntity saveMember = memberRepository.save(memberEntity);
-        MemberEntity findMember = memberRepository.findById(saveMember.getMemberId())
-                .orElseThrow(() -> new RuntimeException("저장된 회원이 없습니다 "));
-
-        // Then
-        assertThat(findMember).isEqualTo(saveMember);
-        assertThat(findMember).isEqualTo(memberEntity);
-    }
-
-    @Test
-    void notExistsId(){
+    public void 회원저장_성공() throws Exception {
         //given
-        MemberEntity member = MemberEntity.builder()
-                .password("1234567890")
-                .phone("01012341234")
-                .memberType(Role.USER)
+        Member member = Member.builder()
+                .username("username").password("1234567890").role(Role.USER)
                 .build();
+
         //when
-        assertThrows(Exception.class, () -> memberRepository.save(member));
+        Member saveMember = memberRepository.save(member);
+
         //then
+        Member findMember = memberRepository.findById(saveMember.getId())
+                .orElseThrow(() -> new RuntimeException("저장된 회원이 없습니다"));
+
+        assertThat(findMember).isSameAs(saveMember);
+        assertThat(findMember).isSameAs(member);
     }
 
     @Test
-    void successMemberInfoModify() throws Exception {
+    public void 오류_회원가입시_아이디가_없음() throws Exception {
         //given
-        MemberEntity member1 = MemberEntity.builder()
-                .memberEmail("test@test.com")
-                .password("1234")
-                .phone("01012341234")
-                .memberType(Role.USER)
-                .build();
+        Member member = Member.builder().password("1234567890").role(Role.USER).build();
+
+        //when, then
+        assertThrows(Exception.class, () -> memberRepository.save(member));
+    }
+
+
+    @Test
+    public void 오류_회원가입시_중복된_아이디가_있음() throws Exception {
+        //given
+        Member member1 = Member.builder().username("username").password("1234567890").role(Role.USER).build();
+        Member member2 = Member.builder().username("username").password("1111111111").role(Role.USER).build();
+
+        memberRepository.save(member1);
+        clear();
+        //when, then
+        assertThrows(Exception.class, () -> memberRepository.save(member2));
+
+    }
+
+    @Test
+    public void 성공_회원수정() throws Exception {
+        //given
+        Member member1 = Member.builder().username("username").password("1234567890").role(Role.USER).build();
         memberRepository.save(member1);
         clear();
 
-        String updatePassword = "update";
-        String updatePhone = "01098765432";
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        //when
-        MemberEntity findMember = memberRepository.findById(member1.getMemberId())
-                .orElseThrow(() -> new Exception());
-        findMember.updatePassword(passwordEncoder, updatePassword);
-        findMember.updatePhone(updatePhone);
-        entityManager.flush();
+        String updatePassword = "updatePassword";
 
+        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+        //when
+        Member findMember = memberRepository.findById(member1.getId()).orElseThrow(() -> new Exception());
+        findMember.updatePassword(passwordEncoder,updatePassword);
+        em.flush();
 
         //then
-        MemberEntity findUpdateMember =
-                memberRepository.findById(findMember.getMemberId())
-                        .orElseThrow(() -> new Exception());
+        Member findUpdateMember = memberRepository.findById(findMember.getId()).orElseThrow(() -> new Exception());
 
         assertThat(findUpdateMember).isSameAs(findMember);
         assertThat(passwordEncoder.matches(updatePassword, findUpdateMember.getPassword())).isTrue();
-        assertThat(findUpdateMember.getPhone()).isEqualTo(updatePhone);
     }
 
     @Test
-    void deleteMember() throws Exception{
+    public void 성공_회원삭제() throws Exception {
         //given
-        MemberEntity member = MemberEntity.builder()
-                .memberEmail("test@test.com")
-                .password("1234")
-                .phone("01012341234")
-                .memberType(Role.USER)
-                .build();
+        Member member1 = Member.builder().username("username").password("1234567890").role(Role.USER).build();
+        memberRepository.save(member1);
+        clear();
 
-        memberRepository.save(member);
-        clear();
         //when
-        memberRepository.delete(member);
+        memberRepository.delete(member1);
         clear();
+
         //then
-        assertThrows(Exception.class, () ->
-                memberRepository.findById(member.getMemberId())
+        assertThrows(Exception.class,
+                () -> memberRepository.findById(member1.getId())
                         .orElseThrow(() -> new Exception()));
     }
 
 
     @Test
-    void existsByMemberEmail() throws Exception{
+    public void existByUsername_정상작동() throws Exception {
         //given
-        String memberEmail = "test@test.com";
-        MemberEntity member = MemberEntity.builder()
-                .memberEmail(memberEmail)
-                .password("1234")
-                .phone("01012341234")
-                .memberType(Role.USER)
-                .build();
-        memberRepository.save(member);
+        String username = "username";
+        Member member1 = Member.builder().username(username).password("1234567890").role(Role.USER).build();
+        memberRepository.save(member1);
         clear();
+
         //when, then
-        assertThat(memberRepository.existsByMemberEmail(memberEmail)).isTrue();
-        assertThat(memberRepository.existsByMemberEmail(memberEmail + "asdasd")).isFalse();
+        assertThat(memberRepository.existsByUsername(username)).isTrue();
+        assertThat(memberRepository.existsByUsername(username+"123")).isFalse();
+    }
+
+
+    @Test
+    public void findByUsername_정상작동() throws Exception {
+        //given
+        String username = "username";
+        Member member1 = Member.builder().username(username).password("1234567890").role(Role.USER).build();
+        memberRepository.save(member1);
+        clear();
+
+
+        //when, then
+        assertThat(memberRepository.findByUsername(username).get().getUsername()).isEqualTo(member1.getUsername());
+        assertThat(memberRepository.findByUsername(username).get().getId()).isEqualTo(member1.getId());
+        assertThrows(Exception.class,
+                () -> memberRepository.findByUsername(username+"123")
+                        .orElseThrow(() -> new Exception()));
+
     }
 
     @Test
-    void findByMemberEmail() throws Exception{
+    public void 회원가입시_생성시간_등록() throws Exception {
         //given
-        String memberEmail = "test@test.com";
-        MemberEntity member = MemberEntity.builder()
-                .memberEmail(memberEmail)
-                .password("1234")
-                .phone("01012341234")
-                .memberType(Role.USER)
-                .build();
-        memberRepository.save(member);
+        Member member1 = Member.builder().username("username").password("1234567890").role(Role.USER).build();
+        memberRepository.save(member1);
         clear();
-        //when, then
-        assertThat(memberRepository.findByMemberEmail(memberEmail).get().getMemberEmail()).isEqualTo(member.getMemberEmail());
-        assertThat(memberRepository.findByMemberEmail(memberEmail).get().getMemberId()).isEqualTo(member.getMemberId());
 
-        assertThrows(Exception.class, () -> memberRepository.findByMemberEmail(memberEmail+"sss").orElseThrow(() -> new Exception()));
-    }
-
-    @Test
-    void registerTime() throws Exception{
-        //given
-        MemberEntity member = MemberEntity.builder()
-                .memberEmail("test@test.com")
-                .password("1234")
-                .phone("01012341234")
-                .memberType(Role.USER)
-                .build();
-        memberRepository.save(member);
-        clear();
         //when
-        MemberEntity findMember = memberRepository.findById(member.getMemberId())
-                .orElseThrow(() -> new Exception());
+        Member findMember = memberRepository.findById(member1.getId()).orElseThrow(() -> new Exception());
         //then
         assertThat(findMember.getRegisterDate()).isNotNull();
         assertThat(findMember.getUpdateDate()).isNotNull();
+
     }
+
+
 }

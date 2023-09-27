@@ -1,5 +1,8 @@
 package com.xenxxn.tablebooking.global.login.handler;
 
+import com.xenxxn.tablebooking.global.jwt.service.JwtService;
+import com.xenxxn.tablebooking.repository.MemberRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,11 +14,34 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 @Slf4j
+@RequiredArgsConstructor
 public class LoginSuccessJWTProvideHandler extends SimpleUrlAuthenticationSuccessHandler {
+
+    private final JwtService jwtService;
+    private final MemberRepository memberRepository;
+
+
     @Override
-    public void onAuthenticationSuccess (HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+
+        String username = extractUsername(authentication);
+        String accessToken = jwtService.createAccessToken(username);
+        String refreshToken = jwtService.createRefreshToken();
+
+        jwtService.sendAccessAndRefreshToken(response, accessToken, refreshToken);
+
+        memberRepository.findByUsername(username).ifPresent(
+                member -> member.updateRefreshToken(refreshToken)
+        );
+
+        log.info( "로그인에 성공합니다. username: {}" ,username);
+        log.info( "AccessToken 을 발급합니다. AccessToken: {}" ,accessToken);
+        log.info( "RefreshToken 을 발급합니다. RefreshToken: {}" ,refreshToken);
+    }
+
+
+    private String extractUsername(Authentication authentication){
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        log.info("로그인 성공! JWT 발급. memberEmail : {}", userDetails.getUsername());
-        response.getWriter().write("success");
+        return userDetails.getUsername();
     }
 }

@@ -1,6 +1,5 @@
 package com.xenxxn.tablebooking.dto;
 
-import com.xenxxn.tablebooking.entity.MemberEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,15 +20,15 @@ public class Member {
     private LocalDateTime registerDate;
     private LocalDateTime updateDate;
 
-//    public static Member fromEntity(MemberEntity memberEntity) {
-//        return Member.builder()
-//                .memberId(memberEntity.getMemberId())
-//                .memberEmail(memberEntity.getMemberEmail())
-//                .password(memberEntity.getPassword())
-//                .phone(memberEntity.getPhone())
-//                .memberType(memberEntity.ge)
-//                .registerDate(memberEntity.getRegisterDate())
-//                .updateDate(memberEntity.getUpdateDate())
-//                .build();
-//    }
+    public static Member fromEntity(com.xenxxn.tablebooking.entity.Member memberEntity) {
+        return com.xenxxn.tablebooking.dto.Member.builder()
+                .memberId(memberEntity.getId())
+                .memberEmail(memberEntity.getUsername())
+                .password(memberEntity.getPassword())
+                .phone(memberEntity.getPhone())
+                .memberType(memberEntity.getRole().name())
+                .registerDate(memberEntity.getRegisterDate())
+                .updateDate(memberEntity.getUpdateDate())
+                .build();
+    }
 }

@@ -4,8 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.xenxxn.tablebooking.Role;
-import com.xenxxn.tablebooking.entity.MemberEntity;
-import com.xenxxn.tablebooking.global.jwt.Service.JwtService;
+import com.xenxxn.tablebooking.entity.Member;
 import com.xenxxn.tablebooking.repository.MemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,13 +25,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 @Transactional
-public class JwtServiceTest {
-    @Autowired
-    JwtService jwtService;
-    @Autowired
-    MemberRepository memberRepository;
-    @Autowired
-    EntityManager entityManager;
+class JwtServiceTest {
+
+
+
+    @Autowired JwtService jwtService;
+    @Autowired MemberRepository memberRepository;
+    @Autowired EntityManager em;
 
     @Value("${jwt.secret}")
     private String secret;
@@ -43,191 +42,241 @@ public class JwtServiceTest {
 
     private static final String ACCESS_TOKEN_SUBJECT = "AccessToken";
     private static final String REFRESH_TOKEN_SUBJECT = "RefreshToken";
-    private static final String USERNAME_CLAIM = "memberEmail";
+    private static final String USERNAME_CLAIM = "username";
     private static final String BEARER = "Bearer ";
 
-    private String memberEmail = "username";
+
+    private String username = "username";
 
     @BeforeEach
-    public void init() {
-        MemberEntity member = MemberEntity.builder()
-                .memberEmail(memberEmail)
-                .password("1234567890")
-                .phone("01012345678")
-                .memberType(Role.USER)
-                .build();
+    public void init(){
+
+        Member member = Member.builder()
+                .username(username).password("1234567890").build();
         memberRepository.save(member);
         clear();
     }
 
     private void clear(){
-        entityManager.flush();
-        entityManager.clear();
+        em.flush();
+        em.clear();
     }
 
-    private DecodedJWT getVerify(String token) {
-        return JWT.require(Algorithm.HMAC512(secret)).build().verify(token);
-    }
 
     @Test
-    void createAccessToken() throws Exception{
+    public void createAccessToken_AccessToken_발급() throws Exception {
         //given
-        String accessToken = jwtService.createAccessToken(memberEmail);
-        DecodedJWT verify = getVerify(accessToken);
+        String accessToken = jwtService.createAccessToken(username);
+
+        DecodedJWT verify = JWT.require(Algorithm.HMAC512(secret)).build().verify(accessToken);
         String subject = verify.getSubject();
-        String findMemberEmail = verify.getClaim(USERNAME_CLAIM).asString();
-        //when
-        //then
-        assertThat(findMemberEmail).isEqualTo(memberEmail);
+        String findUsername = verify.getClaim(USERNAME_CLAIM).asString();
+
+        assertThat(findUsername).isEqualTo(username);
         assertThat(subject).isEqualTo(ACCESS_TOKEN_SUBJECT);
     }
 
     @Test
-    //리프레쉬 토큰은 memberEmail 없어야 함.
-    void createRefreshToken() throws Exception{
+    public void createRefreshToken_RefreshToken_발급() throws Exception {
         //given
         String refreshToken = jwtService.createRefreshToken();
-        DecodedJWT verify = getVerify(refreshToken);
+        DecodedJWT verify = JWT.require(Algorithm.HMAC512(secret)).build().verify(refreshToken);
         String subject = verify.getSubject();
-        String memberEmail = verify.getClaim(USERNAME_CLAIM).asString();
-        //when
-        //then
+        String username = verify.getClaim(USERNAME_CLAIM).asString();
         assertThat(subject).isEqualTo(REFRESH_TOKEN_SUBJECT);
-        assertThat(memberEmail).isNull();
+        assertThat(username).isNull();
     }
 
     @Test
-    void updateRefreshToken() throws Exception{
+    public void updateRefreshToken_refreshToken_업데이트() throws Exception {
         //given
         String refreshToken = jwtService.createRefreshToken();
-        jwtService.updateRefreshToken(memberEmail, refreshToken);
+        jwtService.updateRefreshToken(username, refreshToken);
         clear();
         Thread.sleep(3000);
+
         //when
         String reIssuedRefreshToken = jwtService.createRefreshToken();
-        jwtService.updateRefreshToken(memberEmail, reIssuedRefreshToken);
+        jwtService.updateRefreshToken(username, reIssuedRefreshToken);
+        clear();
+
         //then
-        assertThrows(Exception.class, () -> memberRepository.findByRefreshToken(refreshToken).get());
-        assertThat(memberRepository.findByRefreshToken(reIssuedRefreshToken).get().getMemberEmail()).isEqualTo(memberEmail);
+        assertThrows(Exception.class, () -> memberRepository.findByRefreshToken(refreshToken).get());//
+        assertThat(memberRepository.findByRefreshToken(reIssuedRefreshToken).get().getUsername()).isEqualTo(username);
     }
 
+
+
     @Test
-    void destroyRefreshToken() throws Exception{
+    public void destroyRefreshToken_refreshToken_제거() throws Exception {
         //given
         String refreshToken = jwtService.createRefreshToken();
-        jwtService.updateRefreshToken(memberEmail, refreshToken);
+        jwtService.updateRefreshToken(username, refreshToken);
         clear();
+
         //when
-        jwtService.destroyRefreshToken(memberEmail);
+        jwtService.destroyRefreshToken(username);
         clear();
+
         //then
         assertThrows(Exception.class, () -> memberRepository.findByRefreshToken(refreshToken).get());
-        MemberEntity member = memberRepository.findByMemberEmail(memberEmail).get();
+
+        Member member = memberRepository.findByUsername(username).get();
         assertThat(member.getRefreshToken()).isNull();
     }
+    @Test
+    public void 토큰_유효성_검사() throws Exception {
+        //given
+        String accessToken = jwtService.createAccessToken(username);
+        String refreshToken = jwtService.createRefreshToken();
+
+        //when, then
+        assertThat(jwtService.isTokenValid(accessToken)).isTrue();
+        assertThat(jwtService.isTokenValid(refreshToken)).isTrue();
+        assertThat(jwtService.isTokenValid(accessToken+"d")).isFalse();
+        assertThat(jwtService.isTokenValid(accessToken+"d")).isFalse();
+
+    }
+
 
     @Test
-    void setAccessTokenHeader() throws Exception{
-        //given
+    public void setAccessTokenHeader_AccessToken_헤더_설정() throws Exception {
         MockHttpServletResponse mockHttpServletResponse = new MockHttpServletResponse();
 
-        String accessToken = jwtService.createAccessToken(memberEmail);
+        String accessToken = jwtService.createAccessToken(username);
         String refreshToken = jwtService.createRefreshToken();
 
         jwtService.setAccessTokenHeader(mockHttpServletResponse, accessToken);
+
+
         //when
-        jwtService.sendToken(mockHttpServletResponse, accessToken, refreshToken);
+        jwtService.sendAccessAndRefreshToken(mockHttpServletResponse,accessToken,refreshToken);
+
         //then
         String headerAccessToken = mockHttpServletResponse.getHeader(accessHeader);
+
         assertThat(headerAccessToken).isEqualTo(accessToken);
     }
 
     @Test
-    void setRefreshTokenHeader() throws Exception {
-        //given
+    public void setRefreshTokenHeader_RefreshToken_헤더_설정() throws Exception {
         MockHttpServletResponse mockHttpServletResponse = new MockHttpServletResponse();
 
-        String accessToken = jwtService.createAccessToken(memberEmail);
+        String accessToken = jwtService.createAccessToken(username);
         String refreshToken = jwtService.createRefreshToken();
 
         jwtService.setRefreshTokenHeader(mockHttpServletResponse, refreshToken);
+
+
         //when
-        jwtService.sendToken(mockHttpServletResponse, accessToken, refreshToken);
+        jwtService.sendAccessAndRefreshToken(mockHttpServletResponse,accessToken,refreshToken);
+
         //then
         String headerRefreshToken = mockHttpServletResponse.getHeader(refreshHeader);
 
         assertThat(headerRefreshToken).isEqualTo(refreshToken);
     }
 
+
+
+
+
     @Test
-    void sendToken() throws Exception{
+    public void sendAccessAndRefreshToken_토큰_전송() throws Exception {
         //given
         MockHttpServletResponse mockHttpServletResponse = new MockHttpServletResponse();
 
-        String accessToken = jwtService.createAccessToken(memberEmail);
+        String accessToken = jwtService.createAccessToken(username);
         String refreshToken = jwtService.createRefreshToken();
+
+
         //when
-        jwtService.sendToken(mockHttpServletResponse, accessToken, refreshToken);
+        jwtService.sendAccessAndRefreshToken(mockHttpServletResponse,accessToken,refreshToken);
+
+
         //then
         String headerAccessToken = mockHttpServletResponse.getHeader(accessHeader);
         String headerRefreshToken = mockHttpServletResponse.getHeader(refreshHeader);
+
+
+
         assertThat(headerAccessToken).isEqualTo(accessToken);
         assertThat(headerRefreshToken).isEqualTo(refreshToken);
+
     }
 
+
+    @Test
+    public void extractAccessToken_AccessToken_추출() throws Exception {
+        //given
+        String accessToken = jwtService.createAccessToken(username);
+        String refreshToken = jwtService.createRefreshToken();
+        HttpServletRequest httpServletRequest = setRequest(accessToken, refreshToken);
+
+        //when
+        String extractAccessToken = jwtService.extractAccessToken(httpServletRequest).orElseThrow(()-> new Exception("토큰이 없습니다"));
+
+
+        //then
+        assertThat(extractAccessToken).isEqualTo(accessToken);
+        assertThat(JWT.require(Algorithm.HMAC512(secret)).build().verify(extractAccessToken).getClaim(USERNAME_CLAIM).asString()).isEqualTo(username);
+    }
+
+
+    @Test
+    public void extractRefreshToken_RefreshToken_추출() throws Exception {
+        //given
+        String accessToken = jwtService.createAccessToken(username);
+        String refreshToken = jwtService.createRefreshToken();
+        HttpServletRequest httpServletRequest = setRequest(accessToken, refreshToken);
+
+
+        //when
+        String extractRefreshToken = jwtService.extractRefreshToken(httpServletRequest).orElseThrow(()-> new Exception("토큰이 없습니다"));
+
+
+        //then
+        assertThat(extractRefreshToken).isEqualTo(refreshToken);
+        assertThat(JWT.require(Algorithm.HMAC512(secret)).build().verify(extractRefreshToken).getSubject()).isEqualTo(REFRESH_TOKEN_SUBJECT);
+    }
+
+
     private HttpServletRequest setRequest(String accessToken, String refreshToken) throws IOException {
+
         MockHttpServletResponse mockHttpServletResponse = new MockHttpServletResponse();
-        jwtService.sendToken(mockHttpServletResponse, accessToken, refreshToken);
+
+        jwtService.sendAccessAndRefreshToken(mockHttpServletResponse,accessToken,refreshToken);
 
         String headerAccessToken = mockHttpServletResponse.getHeader(accessHeader);
         String headerRefreshToken = mockHttpServletResponse.getHeader(refreshHeader);
 
         MockHttpServletRequest httpServletRequest = new MockHttpServletRequest();
 
-        httpServletRequest.addHeader(accessHeader, BEARER + headerAccessToken);
-        httpServletRequest.addHeader(refreshHeader, BEARER + headerRefreshToken);
+        httpServletRequest.addHeader(accessHeader, BEARER+headerAccessToken);
+        httpServletRequest.addHeader(refreshHeader, BEARER+headerRefreshToken);
 
         return httpServletRequest;
     }
 
-    @Test
-    void extractAccessToken() throws Exception{
-        //given
-        String accessToken = jwtService.createAccessToken(memberEmail);
-        String refreshToken = jwtService.createRefreshToken();
-        HttpServletRequest httpServletRequest = setRequest(accessToken, refreshToken);
-        //when
-        String extractAccessToken = jwtService.extractAccessToken(httpServletRequest);
-        //then
-        assertThat(extractAccessToken).isEqualTo(accessToken);
-        assertThat(getVerify(extractAccessToken).getClaim(USERNAME_CLAIM)
-                .asString()).isEqualTo(memberEmail);
-    }
 
     @Test
-    void extractRefreshToken() throws Exception{
+    public void extractUsername_Username_추출() throws Exception {
         //given
-        String accessToken = jwtService.createAccessToken(memberEmail);
-        String refreshToken = jwtService.createRefreshToken();
-        HttpServletRequest httpServletRequest = setRequest(accessToken, refreshToken);
-        //when
-        String extractRefreshToken = jwtService.extractRefreshToken(httpServletRequest);
-        //then
-        assertThat(extractRefreshToken).isEqualTo(refreshToken);
-        assertThat(getVerify(extractRefreshToken).getSubject()).isEqualTo(REFRESH_TOKEN_SUBJECT);
-    }
-
-    @Test
-    void extractMemberEmail() throws Exception{
-        //given
-        String accessToken = jwtService.createAccessToken(memberEmail);
+        String accessToken = jwtService.createAccessToken(username);
         String refreshToken = jwtService.createRefreshToken();
         HttpServletRequest httpServletRequest = setRequest(accessToken, refreshToken);
 
-        String requestAccessToken = jwtService.extractAccessToken(httpServletRequest);
+        String requestAccessToken = jwtService.extractAccessToken(httpServletRequest).orElseThrow(()->new Exception("토큰이 없습니다"));
+
         //when
-        String extractMemberEmail = jwtService.extractMemberEmail(requestAccessToken);
+        String extractUsername = jwtService.extractUsername(requestAccessToken).orElseThrow(()->new Exception("토큰이 없습니다"));
+
+
         //then
-        assertThat(extractMemberEmail).isEqualTo(memberEmail);
+        assertThat(extractUsername).isEqualTo(username);
     }
+
+
+
+
 }

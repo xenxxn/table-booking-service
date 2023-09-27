@@ -1,6 +1,6 @@
 package com.xenxxn.tablebooking.service;
 
-import com.xenxxn.tablebooking.entity.MemberEntity;
+import com.xenxxn.tablebooking.entity.Member;
 import com.xenxxn.tablebooking.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.User;
@@ -15,13 +15,13 @@ public class LoginService implements UserDetailsService {
     private final MemberRepository memberRepository;
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        MemberEntity member = memberRepository.findByMemberEmail(username)
+        Member member = memberRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("아이디가 없습니다"));
 
         return User.builder()
-                .username(member.getMemberEmail())
+                .username(member.getUsername())
                 .password(member.getPassword())
-                .roles(member.getMemberType().name())
+                .roles(member.getRole().name())
                 .build();
     }
 }
