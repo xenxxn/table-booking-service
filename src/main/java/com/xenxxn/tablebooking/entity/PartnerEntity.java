@@ -1,5 +1,6 @@
 package com.xenxxn.tablebooking.entity;
 
+import com.xenxxn.tablebooking.Role;
 import lombok.*;
 //import org.springframework.security.core.GrantedAuthority;
 //import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -10,6 +11,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import static javax.persistence.EnumType.STRING;
 
 @Getter
 @Setter
@@ -28,7 +31,8 @@ public class PartnerEntity{
     private String password;
     private String phone;
     @Column(name = "member_type")
-    private String memberType;
+    @Enumerated(STRING)
+    private Role memberType;
     @Column(name = "register_date")
     private LocalDateTime registerDate;
     @Column(name = "update_date")

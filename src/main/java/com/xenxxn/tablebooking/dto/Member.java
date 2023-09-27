@@ -21,15 +21,15 @@ public class Member {
     private LocalDateTime registerDate;
     private LocalDateTime updateDate;
 
-    public static Member fromEntity(MemberEntity memberEntity) {
-        return Member.builder()
-                .memberId(memberEntity.getMemberId())
-                .memberEmail(memberEntity.getMemberEmail())
-                .password(memberEntity.getPassword())
-                .phone(memberEntity.getPhone())
-                .memberType(memberEntity.getMemberType())
-                .registerDate(memberEntity.getRegisterDate())
-                .updateDate(memberEntity.getUpdateDate())
-                .build();
-    }
+//    public static Member fromEntity(MemberEntity memberEntity) {
+//        return Member.builder()
+//                .memberId(memberEntity.getMemberId())
+//                .memberEmail(memberEntity.getMemberEmail())
+//                .password(memberEntity.getPassword())
+//                .phone(memberEntity.getPhone())
+//                .memberType(memberEntity.ge)
+//                .registerDate(memberEntity.getRegisterDate())
+//                .updateDate(memberEntity.getUpdateDate())
+//                .build();
+//    }
 }
