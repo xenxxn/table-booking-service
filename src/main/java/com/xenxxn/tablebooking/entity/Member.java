@@ -16,6 +16,7 @@ import static javax.persistence.EnumType.STRING;
 @Entity
 @AllArgsConstructor
 @Builder
+@Setter
 @Table(name = "member")
 public class Member extends BaseTimeEntity implements UserDetails {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
