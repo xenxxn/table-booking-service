@@ -22,22 +22,27 @@ public class TestController {
     @Autowired MemberRepository memberRepository;
     @Autowired EntityManager entityManager;
     @PostMapping("/register")
-    public String register(Member member) {
+    public String register() {
 
         try{
-            String updatePassword = "1234";
 
             BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-            List<Member> list = memberRepository.findAll();
-
             //when
-            Member findMember = memberRepository.findByUsername("testusername").orElseThrow(() -> new Exception());
-            findMember.updatePassword(passwordEncoder,updatePassword);
+            Member newMember = Member.builder()
+                    .username("hateNull")
+                    .password("{noop}1234")
+                    .phone("01012341234")
+                    .role(Role.USER)
+                    .build();
+            newMember.encodePassword(passwordEncoder);
+            memberRepository.save(newMember);
+
             entityManager.flush();
             entityManager.clear();
 
-            return "success";
+
+            return "회원가입 성공";
         }catch(Exception ex){
             return ex.getMessage();
         }
